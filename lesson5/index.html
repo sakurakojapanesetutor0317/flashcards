@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minna no Nihongo Lesson 5</title>
+    <style>
+        :root {
+            --bg-color: #f5f3ff;
+            --card-bg: #ffffff;
+            --primary: #a78bfa;
+            --text-main: #4c1d95;
+            --border-color: #f3e8ff;
+            --accent-pink: #f172a3;
+        }
+
+        body { font-family: 'Nunito', sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        h1 { margin-bottom: 20px; font-size: 24px; }
+        .controls { margin-bottom: 20px; font-weight: 700; color: var(--primary); }
+        .card { 
+            width: 300px; height: 200px; background: var(--card-bg); 
+            border: 4px solid var(--border-color); border-radius: 32px; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            box-shadow: 0 20px 40px -15px rgba(167, 139, 250, 0.2);
+            cursor: pointer; transition: transform 0.3s; padding: 20px; text-align: center;
+        }
+        .card:hover { transform: scale(1.02); }
+        .word { font-size: 32px; font-weight: 800; }
+        ruby rt { font-size: 14px; color: var(--primary); }
+        .romaji { font-size: 16px; color: #94a3b8; margin-top: 5px; }
+        .hint { font-size: 14px; color: var(--accent-pink); margin-top: 15px; font-weight: 700; }
+        button { margin-top: 20px; padding: 12px 30px; font-size: 16px; font-weight: 700; background: #818cf8; color: white; border: none; border-radius: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>Minna no Nihongo Lesson 5</h1>
+
+    <div class="controls">
+        <label>
+            <input type="checkbox" id="modeToggle" onchange="updateDisplay()"> Kanji + Furigana Mode
+        </label>
+    </div>
+
+    <div class="card" id="card" onclick="flipCard()">
+        <div id="wordDisplay">
+            <div id="word" class="word">---</div>
+            <div id="romaji" class="romaji">---</div>
+        </div>
+        <div class="hint">Click to flip</div>
+    </div>
+    
+    <button onclick="nextCard()">Next Card 👉</button>
+
+<script>
+    const data = [
+const data = [
+    { k: "<ruby>来<rt>き</rt></ruby>ます", r: "きます", m: "ki ma su", a: "come" },
+    { k: "<ruby>行<rt>い</rt></ruby>きます", r: "いきます", m: "i ki ma su", a: "go" },
+    { k: "<ruby>帰<rt>かえ</rt></ruby>ります", r: "かえります", m: "ka e ri ma su", a: "go home" },
+    { k: "スーパー", r: "スーパー", m: "su - pa -", a: "super market" },
+    { k: "<ruby>電車<rt>でんしゃ</rt></ruby>", r: "でんしゃ", m: "de n sha", a: "train" },
+    { k: "バス", r: "バス", m: "ba su", a: "bus" },
+    { k: "<ruby>地下鉄<rt>ちかてつ</rt></ruby>", r: "ちかてつ", m: "chi ka te tsu", a: "subway" },
+    { k: "<ruby>新幹線<rt>しんかんせん</rt></ruby>", r: "しんかんせん", m: "shi n ka n se n", a: "bullet train" },
+    { k: "<ruby>船<rt>ふね</rt></ruby>", r: "ふね", m: "fu ne", a: "ship" },
+    { k: "<ruby>飛行機<rt>ひこうき</rt></ruby>", r: "ひこうき", m: "hi ko u ki", a: "airplane" },
+    { k: "<ruby>駅<rt>えき</rt></ruby>", r: "えき", m: "e ki", a: "station" },
+    { k: "<ruby>学校<rt>がっこう</rt></ruby>", r: "がっこう", m: "ga kko u", a: "school" },
+    { k: "<ruby>自転車<rt>じてんしゃ</rt></ruby>", r: "じてんしゃ", m: "ji te n sha", a: "bicycle" },
+    { k: "タクシー", r: "タクシー", m: "ta ku shi -", a: "taxi" },
+    { k: "<ruby>友達<rt>ともだち</rt></ruby>", r: "ともだち", m: "to mo da chi", a: "friend" },
+    { k: "<ruby>彼<rt>かれ</rt></ruby>", r: "かれ", m: "ka re", a: "he, boyfriend" },
+    { k: "<ruby>彼女<rt>かのじょ</rt></ruby>", r: "かのじょ", m: "ka no jo", a: "she, girlfriend" },
+    { k: "<ruby>一人<rt>ひとり</rt></ruby>で", r: "ひとりで", m: "hi to ri de", a: "alone, by oneself" },
+    { k: "<ruby>家族<rt>かぞく</rt></ruby>", r: "かぞく", m: "ka zo ku", a: "family" },
+    { k: "<ruby>誕生日<rt>たんじょうび</rt></ruby>", r: "たんじょうび", m: "ta n jo u bi", a: "birthday" },
+    { k: "<ruby>歩<rt>ある</rt></ruby>いて", r: "あるいて", m: "a ru i te", a: "on foot" }
+    ];
+    
+    let index = 0;
+    let isFront = true;
+
+ function updateDisplay() {
+    const isKanjiMode = document.getElementById('modeToggle').checked;
+    const wordDiv = document.getElementById('word');
+    
+    if (isFront) {
+        if (isKanjiMode) {
+            // ここでHTMLタグとしてそのまま出力します
+            wordDiv.innerHTML = data[index].k;
+        } else {
+            wordDiv.innerHTML = data[index].r;
+        }
+        document.getElementById('romaji').innerText = data[index].m;
+    } else {
+        wordDiv.innerHTML = data[index].a;
+        document.getElementById('romaji').innerText = "";
+        }
+    }
+
+    function flipCard() { isFront = !isFront; updateDisplay(); }
+    function nextCard() { index = (index + 1) % data.length; isFront = true; updateDisplay(); }
+
+    updateDisplay();
+</script>
+</body>
+</html>
