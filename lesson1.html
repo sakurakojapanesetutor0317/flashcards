@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minna no Nihongo Lesson 1</title>
+    <style>
+        :root {
+            --bg-color: #f5f3ff;
+            --card-bg: #ffffff;
+            --primary: #a78bfa;
+            --text-main: #4c1d95;
+            --border-color: #f3e8ff;
+            --accent-pink: #f172a3;
+        }
+
+        body { font-family: 'Nunito', sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        h1 { margin-bottom: 20px; font-size: 24px; color: var(--text-main); }
+        
+        .controls { margin-bottom: 20px; font-weight: 700; color: var(--primary); }
+        
+        .card { 
+            width: 300px; height: 200px; background: var(--card-bg); 
+            border: 4px solid var(--border-color); border-radius: 32px; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            box-shadow: 0 20px 40px -15px rgba(167, 139, 250, 0.2);
+            cursor: pointer; transition: transform 0.3s; padding: 20px; text-align: center;
+        }
+        .card:hover { transform: scale(1.02); }
+        
+        .word { font-size: 32px; font-weight: 800; }
+        ruby rt { font-size: 14px; color: var(--primary); }
+        .romaji { font-size: 16px; color: #94a3b8; margin-top: 5px; }
+        .hint { font-size: 14px; color: var(--accent-pink); margin-top: 15px; font-weight: 700; }
+        
+        button { 
+            margin-top: 20px; padding: 12px 30px; font-size: 16px; font-weight: 700; 
+            background: #818cf8; color: white; border: none; 
+            border-radius: 20px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Minna no Nihongo Lesson 1</h1>
+
+    <div class="controls">
+        <label>
+            <input type="checkbox" id="modeToggle" onchange="updateDisplay()"> Kanji + Furigana Mode
+        </label>
+    </div>
+
+    <div class="card" id="card" onclick="flipCard()">
+        <div id="wordDisplay">
+            <div id="word" class="word">---</div>
+            <div id="romaji" class="romaji">---</div>
+        </div>
+        <div class="hint">Click to flip</div>
+    </div>
+    
+    <button onclick="nextCard()">Next Card 👉</button>
+
+<script>
+    // k:漢字, r:ルビ(ひらがな), m:ローマ字, a:意味
+    const data = [
+{ k: "<ruby>私<rt>わたし</rt></ruby>", r: "わたし", m: "wa ta shi", a: "I" },
+    { k: "<ruby>貴方<rt>あなた</rt></ruby>", r: "あなた", m: "a na ta", a: "You" },
+    { k: "<ruby>彼<rt>かれ</rt></ruby>", r: "かれ", m: "ka re", a: "He" },
+    { k: "<ruby>彼女<rt>かのじょ</rt></ruby>", r: "かのじょ", m: "ka no jo", a: "She" },
+    { k: "<ruby>先生<rt>せんせい</rt></ruby>", r: "せんせい", m: "se n se i", a: "Teacher" },
+    { k: "<ruby>教師<rt>きょうし</rt></ruby>", r: "きょうし", m: "kyo u shi", a: "Teacher (profession)" },
+    { k: "<ruby>学生<rt>がくせい</rt></ruby>", r: "がくせい", m: "ga ku se i", a: "Student" },
+    { k: "<ruby>会社員<rt>かいしゃいん</rt></ruby>", r: "かいしゃいん", m: "ka i sha i n", a: "Company employee" },
+    { k: "<ruby>銀行員<rt>ぎんこういん</rt></ruby>", r: "ぎんこういん", m: "gi n ko u i n", a: "Bank employee" },
+    { k: "<ruby>医者<rt>いしゃ</rt></ruby>", r: "いしゃ", m: "i sha", a: "Doctor" },
+    { k: "<ruby>研究者<rt>けんきゅうしゃ</rt></ruby>", r: "けんきゅうしゃ", m: "ke n kyu u sha", a: "Researcher" },
+    { k: "エンジニア", r: "エンジニア", m: "e n ji ni a", a: "Engineer" },
+    { k: "<ruby>仕事<rt>しごと</rt></ruby>", r: "しごと", m: "shi go to", a: "Job" },
+    { k: "<ruby>学校<rt>がっこう</rt></ruby>", r: "がっこう", m: "ga kko u", a: "School" },
+    { k: "<ruby>病院<rt>びょういん</rt></ruby>", r: "びょういん", m: "byo u i n", a: "Hospital" },
+    { k: "<ruby>国<rt>くに</rt></ruby>", r: "くに", m: "ku ni", a: "Country" },
+    { k: "<ruby>日本<rt>にほん</rt></ruby>", r: "にほん", m: "ni ho n", a: "Japan" },
+    { k: "<ruby>日本人<rt>にほんじん</rt></ruby>", r: "にほんじん", m: "ni ho n ji n", a: "Japanese" },
+    { k: "<ruby>外国人<rt>がいこくじん</rt></ruby>", r: "がいこくじん", m: "ga i ko ku ji n", a: "foreigner" }
+    ];
+    
+    let index = 0;
+    let isFront = true;
+
+function updateDisplay() {
+    const isKanjiMode = document.getElementById('modeToggle').checked;
+    const wordDiv = document.getElementById('word');
+    
+    if (isFront) {
+        if (isKanjiMode) {
+            // ここでHTMLタグとしてそのまま出力します
+            wordDiv.innerHTML = data[index].k;
+        } else {
+            wordDiv.innerHTML = data[index].r;
+        }
+        document.getElementById('romaji').innerText = data[index].m;
+    } else {
+        wordDiv.innerHTML = data[index].a;
+        document.getElementById('romaji').innerText = "";
+        }
+    }
+
+    function flipCard() { isFront = !isFront; updateDisplay(); }
+    function nextCard() { index = (index + 1) % data.length; isFront = true; updateDisplay(); }
+
+    updateDisplay();
+</script>
+</body>
+</html>

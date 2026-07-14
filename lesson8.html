@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lesson 8</title>
+    <style>
+        :root {
+            --bg-color: #f5f3ff;
+            --card-bg: #ffffff;
+            --primary: #a78bfa;
+            --text-main: #4c1d95;
+            --border-color: #f3e8ff;
+            --accent-pink: #f172a3;
+        }
+
+        body { font-family: 'Nunito', sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        h1 { margin-bottom: 20px; font-size: 24px; }
+        .controls { margin-bottom: 20px; font-weight: 700; color: var(--primary); }
+        .card { 
+            width: 300px; height: 200px; background: var(--card-bg); 
+            border: 4px solid var(--border-color); border-radius: 32px; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            box-shadow: 0 20px 40px -15px rgba(167, 139, 250, 0.2);
+            cursor: pointer; transition: transform 0.3s; padding: 20px; text-align: center;
+        }
+        .card:hover { transform: scale(1.02); }
+        .word { font-size: 32px; font-weight: 800; }
+        ruby rt { font-size: 14px; color: var(--primary); }
+        .romaji { font-size: 16px; color: #94a3b8; margin-top: 5px; }
+        .hint { font-size: 14px; color: var(--accent-pink); margin-top: 15px; font-weight: 700; }
+        button { margin-top: 20px; padding: 12px 30px; font-size: 16px; font-weight: 700; background: #818cf8; color: white; border: none; border-radius: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>Minna no Nihongo Lesson 8</h1>
+
+    <div class="controls">
+        <label>
+            <input type="checkbox" id="modeToggle" onchange="updateDisplay()"> Kanji + Furigana Mode
+        </label>
+    </div>
+
+    <div class="card" id="card" onclick="flipCard()">
+        <div id="wordDisplay">
+            <div id="word" class="word">---</div>
+            <div id="romaji" class="romaji">---</div>
+        </div>
+        <div class="hint">Click to flip</div>
+    </div>
+    
+    <button onclick="nextCard()">Next Card 👉</button>
+
+<script>
+    const data = [
+{ k: "<ruby>親切<rt>しんせつ</rt></ruby>な", r: "しんせつな", m: "shi n se tsu na", a: "kind" },
+    { k: "<ruby>元気<rt>げんき</rt></ruby>な", r: "げんきな", m: "ge n ki na", a: "healthy, cheerful" },
+    { k: "<ruby>暇<rt>ひま</rt></ruby>な", r: "ひまな", m: "hi ma na", a: "free (time)" },
+    { k: "<ruby>有名<rt>ゆうめい</rt></ruby>な", r: "ゆうめいな", m: "yu u me i na", a: "famous" },
+    { k: "<ruby>綺麗<rt>きれい</rt></ruby>な", r: "きれいな", m: "ki re i na", a: "beautiful, clean" },
+    { k: "<ruby>静<rt>しず</rt></ruby>かな", r: "しずかな", m: "shi zu ka na", a: "quiet" },
+    { k: "ハンサムな", r: "ハンサムな", m: "ha n sa mu na", a: "handsome" },
+    { k: "<ruby>賑<rt>にぎ</rt></ruby>やかな", r: "にぎやかな", m: "ni gi ya ka na", a: "lively" },
+    { k: "<ruby>人気<rt>にんき</rt></ruby>な", r: "にんきな", m: "ni n ki na", a: "popular" },
+    { k: "<ruby>新<rt>あたら</rt></ruby>しい", r: "あたらしい", m: "a ta ra shi i", a: "new" },
+    { k: "<ruby>古<rt>ふる</rt></ruby>い", r: "ふるい", m: "fu ru i", a: "old (not of age)" },
+    { k: "<ruby>大<rt>おお</rt></ruby>きい", r: "おおきい", m: "o o ki i", a: "big, large" },
+    { k: "<ruby>小<rt>ちい</rt></ruby>さい", r: "ちいさい", m: "chi i sa i", a: "small, little" },
+    { k: "<ruby>寒<rt>さむ</rt></ruby>い", r: "さむい", m: "sa mu i", a: "cold (weather)" },
+    { k: "<ruby>暑<rt>あつ</rt></ruby>い", r: "あつい", m: "a tsu i", a: "hot (weather)" },
+    { k: "<ruby>良<rt>い</rt></ruby>い", r: "いい/よい", m: "i i / yo i", a: "good" },
+    { k: "<ruby>悪<rt>わる</rt></ruby>い", r: "わるい", m: "wa ru i", a: "bad" },
+    { k: "かっこいい", r: "かっこいい", m: "ka kko i i", a: "cool" },
+    { k: "<ruby>易<rt>やさ</rt></ruby>しい", r: "やさしい", m: "ya sa shi i", a: "easy" },
+    { k: "<ruby>難<rt>むずか</rt></ruby>しい", r: "むずかしい", m: "mu zu ka shi i", a: "difficult" },
+    { k: "<ruby>冷<rt>つめ</rt></ruby>たい", r: "つめたい", m: "tsu me ta i", a: "cold (touch)" },
+    { k: "<ruby>熱<rt>あつ</rt></ruby>い", r: "あつい", m: "a tsu i", a: "hot (touch)" },
+    { k: "<ruby>高<rt>たか</rt></ruby>い", r: "たかい", m: "ta ka i", a: "tall, high" },
+    { k: "<ruby>低<rt>ひく</rt></ruby>い", r: "ひくい", m: "hi ku i", a: "low" },
+    { k: "<ruby>高<rt>たか</rt></ruby>い", r: "たかい", m: "ta ka i", a: "expensive" },
+    { k: "<ruby>安<rt>やす</rt></ruby>い", r: "やすい", m: "ya su i", a: "cheap" },
+    { k: "<ruby>忙<rt>いそが</rt></ruby>しい", r: "いそがしい", m: "i so ga shi i", a: "busy" },
+    { k: "おもしろい", r: "おもしろい", m: "o mo shi ro i", a: "interesting" },
+    { k: "<ruby>楽<rt>たの</rt></ruby>しい", r: "たのしい", m: "ta no shi i", a: "fun" },
+    { k: "おいしい", r: "おいしい", m: "o i shi i", a: "delicious, tasty" },
+    { k: "<ruby>白<rt>しろ</rt></ruby>い", r: "しろい", m: "shi ro i", a: "white" },
+    { k: "<ruby>赤<rt>あか</rt></ruby>い", r: "あかい", m: "a ka i", a: "red" },
+    { k: "<ruby>黒<rt>くろ</rt></ruby>い", r: "くろい", m: "ku ro i", a: "black" },
+    { k: "<ruby>青<rt>あお</rt></ruby>い", r: "あおい", m: "a o i", a: "blue" },
+    { k: "<ruby>食<rt>た</rt></ruby>べ<ruby>物<rt>もの</rt></ruby>", r: "たべもの", m: "ta be mo no", a: "food" },
+    { k: "<ruby>仕事<rt>しごと</rt></ruby>", r: "しごと", m: "shi go to", a: "work, business" },
+    { k: "<ruby>勉強<rt>べんきょう</rt></ruby>", r: "べんきょう", m: "be n kyo u", a: "study" },
+    { k: "<ruby>桜<rt>さくら</rt></ruby>", r: "さくら", m: "sa ku ra", a: "cherry blossom" },
+    { k: "<ruby>車<rt>くるま</rt></ruby>", r: "くるま", m: "ku ru ma", a: "car" },
+    { k: "<ruby>山<rt>やま</rt></ruby>", r: "やま", m: "ya ma", a: "mountain" },
+    { k: "<ruby>甘<rt>あま</rt></ruby>い", r: "あまい", m: "a ma i", a: "sweet" },
+    { k: "<ruby>辛<rt>から</rt></ruby>い", r: "からい", m: "ka ra i", a: "spicy" },
+    { k: "<ruby>酸<rt>す</rt></ruby>っぱい", r: "すっぱい", m: "su ppa i", a: "sour" },
+    { k: "<ruby>塩<rt>しお</rt></ruby>っぱい", r: "しょっぱい", m: "sho ppa i", a: "salty" },
+    { k: "<ruby>苦<rt>にが</rt></ruby>い", r: "にがい", m: "ni ga i", a: "bitter" },
+    { k: "<ruby>美味<rt>おい</rt></ruby>しい", r: "おいしい", m: "o i shi i", a: "delicious" },
+    { k: "<ruby>不味<rt>まず</rt></ruby>い", r: "まずい", m: "ma zu i", a: "bad-tasting" },
+    { k: "とても", r: "とても", m: "to te mo", a: "very" },
+    { k: "あまり", r: "あまり", m: "a ma ri", a: "not really, not very / used with a negative form" }
+    ];
+    
+    let index = 0;
+    let isFront = true;
+
+ function updateDisplay() {
+    const isKanjiMode = document.getElementById('modeToggle').checked;
+    const wordDiv = document.getElementById('word');
+    
+    if (isFront) {
+        if (isKanjiMode) {
+            // ここでHTMLタグとしてそのまま出力します
+            wordDiv.innerHTML = data[index].k;
+        } else {
+            wordDiv.innerHTML = data[index].r;
+        }
+        document.getElementById('romaji').innerText = data[index].m;
+    } else {
+        wordDiv.innerHTML = data[index].a;
+        document.getElementById('romaji').innerText = "";
+        }
+    }
+
+    function flipCard() { isFront = !isFront; updateDisplay(); }
+    function nextCard() { index = (index + 1) % data.length; isFront = true; updateDisplay(); }
+
+    updateDisplay();
+</script>
+</body>
+</html>
