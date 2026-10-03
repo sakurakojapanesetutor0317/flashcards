@@ -101,6 +101,41 @@ header p{
     margin-bottom:15px;
 
 }
+  .back-link {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #556;
+    text-decoration: none;
+    margin-bottom: 18px;
+  }
+  .back-link:hover { color: #223148; }
+.back-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #4a6ce8;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  white-space: nowrap;
+  
+  /* 上下に適度な隙間をあける（1行分＋α） */
+  margin-top: 10px;
+  margin-bottom: 20px; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.back-pill:hover {
+  opacity: 0.9;
+}
+
+.back-pill .icon {
+  font-size: 14px;
+}
 
 .lesson{
 
@@ -146,7 +181,10 @@ footer{
 
 <div class="container">
 
-<a class="back" href="../index.html">← Back to Home</a>
+<a href="../index.html" class="back-pill">
+  <span class="icon">☚</span> Back to Home
+</a>
+
 
 <div class="grid">
 
