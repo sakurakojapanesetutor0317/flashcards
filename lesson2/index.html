@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minna no Nihongo Lesson 2</title>
+    <title>Minna no Nihongo Lesson 1</title>
     <style>
         :root {
             --bg-color: #f5f3ff;
@@ -15,26 +14,49 @@
         }
 
         body { font-family: 'Nunito', sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        h1 { margin-bottom: 20px; font-size: 24px; }
+        h1 { margin-bottom: 20px; font-size: 24px; color: var(--text-main); }
+        
         .controls { margin-bottom: 20px; font-weight: 700; color: var(--primary); }
+        
         .card { 
             width: 300px; height: 200px; background: var(--card-bg); 
             border: 4px solid var(--border-color); border-radius: 32px; 
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
             box-shadow: 0 20px 40px -15px rgba(167, 139, 250, 0.2);
             cursor: pointer; transition: transform 0.3s; padding: 20px; text-align: center;
+            box-sizing: border-box;
         }
         .card:hover { transform: scale(1.02); }
+        
         .word { font-size: 32px; font-weight: 800; }
         ruby rt { font-size: 14px; color: var(--primary); }
         .romaji { font-size: 16px; color: #94a3b8; margin-top: 5px; }
         .hint { font-size: 14px; color: var(--accent-pink); margin-top: 15px; font-weight: 700; }
-        button { margin-top: 20px; padding: 12px 30px; font-size: 16px; font-weight: 700; background: #818cf8; color: white; border: none; border-radius: 20px; cursor: pointer; }
+        
+        button { 
+            margin: 10px auto; 
+            padding: 12px 32px; 
+            font-size: 16px; 
+            font-weight: 700; 
+            background: #818cf8; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            cursor: pointer;
+            width: fit-content; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: opacity 0.2s, transform 0.1s;
+            display: inline-block;
+        }
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
 
-    <h1>Minna no Nihongo Lesson 2</h1>
+    <h1>Minna no Nihongo Lesson 1</h1>
 
     <div class="controls">
         <label>
@@ -50,18 +72,42 @@
         <div class="hint">Click to flip</div>
     </div>
     
-    <button onclick="nextCard()">Next Card 👉</button>
+<button onclick="nextCard()">Next Card 👉</button>
+
+<div id="resultScreen" class="card" style="display: none; height: auto; min-height: 220px; width: 320px;">
+
+    <div style="font-size: 40px; margin-bottom: 5px;">🎉</div>
+
+    <h2 style="margin: 5px 0; color: #4c1d95; font-size: 22px;">
+        Good job!
+    </h2>
+
+    <p style="font-size: 15px; font-weight: 700; color: #a78bfa; margin: 5px 0;">
+        よくがんばりました！
+    </p>
+
+    <p id="resultText" style="color: #64748b; margin: 12px 0; font-size: 13px;">
+    </p>
+
+    <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+        <button onclick="restartCards()">🔄 Review Again</button>
+        <button onclick="history.back()" style="background: #818cf8; margin-top: 6px;">
+            👈 Back to Home
+        </button>
+    </div>
+
+</div>
 
 <script>
     const data = [
 { k: "これ", r: "これ", m: "ko re", a: "this / near the speaker" },
-    { k: "それ", r: "それ", m: "so re", a: "that / near the listener" },
+    { k: "それ", r: "それ", m: "so re", a: "that / close to the listener" },
     { k: "あれ", r: "あれ", m: "a re", a: "that / far away" },
     { k: "どれ", r: "どれ", m: "do re", a: "which" },
-    { k: "この", r: "この", m: "ko no", a: "this (+ NOUN) / near the speaker" },
-    { k: "その", r: "その", m: "so no", a: "that (+ NOUN) / near the listener" },
-    { k: "あの", r: "あの", m: "a no", a: "that (+ NOUN) / far away" },
-    { k: "どの", r: "どの", m: "do no", a: "which (+ NOUN)" },
+    { k: "この", r: "この", m: "ko no", a: "this + NOUN / near the speaker" },
+    { k: "その", r: "その", m: "so no", a: "that + NOUN / close the listener" },
+    { k: "あの", r: "あの", m: "a no", a: "that + NOUN / far away" },
+    { k: "どの", r: "どの", m: "do no", a: "which + NOUN" },
     { k: "<ruby>私<rt>わたし</rt></ruby>の", r: "わたしの", m: "wa ta shi no", a: "my" },
     { k: "<ruby>貴方<rt>あなた</rt></ruby>の", r: "あなたの", m: "a na ta no", a: "your" },
     { k: "<ruby>彼<rt>かれ</rt></ruby>の", r: "かれの", m: "ka re no", a: "his" },
@@ -98,26 +144,52 @@
     let index = 0;
     let isFront = true;
 
-function updateDisplay() {
-    const isKanjiMode = document.getElementById('modeToggle').checked;
-    const wordDiv = document.getElementById('word');
-    
-    if (isFront) {
-        if (isKanjiMode) {
-            // ここでHTMLタグとしてそのまま出力します
-            wordDiv.innerHTML = data[index].k;
+    function updateDisplay() {
+        const isKanjiMode = document.getElementById('modeToggle').checked;
+        const wordDiv = document.getElementById('word');
+        
+        if (isFront) {
+            wordDiv.innerHTML = isKanjiMode ? data[index].k : data[index].r;
+            document.getElementById('romaji').innerText = data[index].m;
         } else {
-            wordDiv.innerHTML = data[index].r;
-        }
-        document.getElementById('romaji').innerText = data[index].m;
-    } else {
-        wordDiv.innerHTML = data[index].a;
-        document.getElementById('romaji').innerText = "";
+            wordDiv.innerHTML = data[index].a;
+            document.getElementById('romaji').innerText = "";
         }
     }
 
-    function flipCard() { isFront = !isFront; updateDisplay(); }
-    function nextCard() { index = (index + 1) % data.length; isFront = true; updateDisplay(); }
+    function flipCard() { 
+        isFront = !isFront; 
+        updateDisplay(); 
+    }
+
+    function nextCard() {
+        index++;
+        isFront = true;
+
+        if (index >= data.length) {
+            document.getElementById('card').style.display = 'none';
+            document.querySelector('button[onclick="nextCard()"]').style.display = 'none';
+            document.getElementById('resultScreen').style.display = 'flex';
+
+            document.getElementById('resultText').innerText =
+                `You completed Lesson 1! 🎉\n${data.length} words completed!`;
+
+            return;
+        }
+
+        updateDisplay();
+    }
+
+    function restartCards() {
+        index = 0;
+        isFront = true;
+
+        document.getElementById('card').style.display = 'flex';
+        document.querySelector('button[onclick="nextCard()"]').style.display = 'inline-block';
+        document.getElementById('resultScreen').style.display = 'none';
+
+        updateDisplay();
+    }
 
     updateDisplay();
 </script>
