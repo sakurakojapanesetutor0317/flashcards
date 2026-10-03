@@ -698,31 +698,408 @@ function wrongSound(){
     { k: "いくら", r: "いくら", m: "i ku ra", a: "How much" }
     ];
     
-    let index = 0;
-    let isFront = true;
+ 
+// Give each card a fixed index (idx), used as the key for Firestore records
+data.forEach((item, i) => { item.idx = i; });
 
-function updateDisplay() {
-    const isKanjiMode = document.getElementById('modeToggle').checked;
-    const wordDiv = document.getElementById('word');
-    
-    if (isFront) {
-        if (isKanjiMode) {
-            // ここでHTMLタグとしてそのまま出力します
-            wordDiv.innerHTML = data[index].k;
-        } else {
-            wordDiv.innerHTML = data[index].r;
-        }
-        document.getElementById('romaji').innerText = data[index].m;
+// Progress for this lesson is stored separately from the other games
+const PROGRESS_COL = "progress_lesson2";
+
+// ===== User / Progress (Firestore) =====
+let currentUser = null;
+let currentUserId = null;
+
+function sanitizeId(name){
+  // Replace characters that aren't allowed in a Firestore document ID
+  return name.trim().replace(/[.$#\[\]\/]/g, "_");
+}
+
+async function ensureUserDoc(name){
+  await setDoc(doc(db, "users", currentUserId), {
+    displayName: name,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+}
+
+// correct = true → "I knew it", false → "Still learning"
+async function updateProgress(qIndex, isCorrect){
+  const ref = doc(db, "users", currentUserId, PROGRESS_COL, String(qIndex));
+  await setDoc(ref, {
+    correct: isCorrect,
+    lastAttemptAt: serverTimestamp(),
+    attempts: increment(1),
+    correctCount: increment(isCorrect ? 1 : 0),
+    wrongCount: increment(isCorrect ? 0 : 1)
+  }, { merge: true });
+}
+
+async function getWrongIndices(){
+  const q = query(
+    collection(db, "users", currentUserId, PROGRESS_COL),
+    where("correct", "==", false)
+  );
+  const snap = await getDocs(q);
+  const list = [];
+  snap.forEach(d => list.push(parseInt(d.id, 10)));
+  return list;
+}
+
+async function refreshWrongCount(){
+  const el = document.getElementById("wrongCountDisplay");
+  try{
+    const wrong = await getWrongIndices();
+    el.textContent = wrong.length === 0
+      ? "No \"still learning\" cards right now 🎉"
+      : `${wrong.length} card(s) to review`;
+  }catch(e){
+    console.error("Failed to fetch progress", e);
+    el.textContent = "(Couldn't connect to the database. Please check your Firebase settings)";
+  }
+}
+
+// ===== Saved words =====
+let savedIndices = new Set();
+
+async function getSavedIndices(){
+  const q = query(
+    collection(db, "users", currentUserId, PROGRESS_COL),
+    where("saved", "==", true)
+  );
+  const snap = await getDocs(q);
+  const list = [];
+  snap.forEach(d => list.push(parseInt(d.id, 10)));
+  return list;
+}
+
+async function refreshSavedCount(){
+  const el = document.getElementById("savedCountDisplay");
+  try{
+    savedIndices = new Set(await getSavedIndices());
+    el.textContent = savedIndices.size === 0
+      ? "No saved words yet"
+      : `⭐ ${savedIndices.size} word(s) saved`;
+  }catch(e){
+    console.error("Failed to fetch saved words", e);
+    el.textContent = "";
+  }
+}
+
+function updateSaveButton(){
+  if (quiz.length === 0 || index >= quiz.length) return;
+  const current = quiz[index];
+  const btn = document.getElementById("saveToggle");
+  const isSaved = savedIndices.has(current.idx);
+  btn.textContent = isSaved ? "⭐" : "☆";
+  btn.classList.toggle("saved", isSaved);
+  btn.title = isSaved ? "Remove from saved words" : "Save this word";
+}
+
+window.toggleSave = async function(){
+  if (quiz.length === 0 || index >= quiz.length) return;
+  const current = quiz[index];
+  const isSaved = savedIndices.has(current.idx);
+  if (isSaved) savedIndices.delete(current.idx); else savedIndices.add(current.idx);
+  updateSaveButton();
+
+  const ref = doc(db, "users", currentUserId, PROGRESS_COL, String(current.idx));
+  try{
+    await setDoc(ref, { saved: !isSaved, savedAt: serverTimestamp() }, { merge: true });
+  }catch(e){
+    console.error("Failed to save word", e);
+    // Roll back the optimistic UI update if the write failed
+    if (isSaved) savedIndices.add(current.idx); else savedIndices.delete(current.idx);
+    updateSaveButton();
+    alert("Couldn't save this word. Please check your connection and try again.");
+  }
+};
+
+window.showSavedWords = async function(){
+  document.getElementById("menuScreen").style.display = "none";
+  document.getElementById("savedScreen").style.display = "block";
+  const listEl = document.getElementById("savedList");
+  listEl.innerHTML = "<p class=\"saved-empty\">Loading…</p>";
+
+  let indices;
+  try{
+    indices = await getSavedIndices();
+  }catch(e){
+    console.error("Failed to fetch saved words", e);
+    listEl.innerHTML = "<p class=\"saved-empty\">Couldn't load saved words. Please check your connection.</p>";
+    return;
+  }
+  if (indices.length === 0){
+    listEl.innerHTML = "<p class=\"saved-empty\">No saved words yet — tap the ☆ on a card to save it here.</p>";
+    return;
+  }
+  renderSavedList(indices);
+};
+
+function renderSavedList(indices){
+  const listEl = document.getElementById("savedList");
+  listEl.innerHTML = "";
+  indices.forEach(i => {
+    const w = data[i];
+    if (!w) return;
+    const row = document.createElement("div");
+    row.className = "saved-item";
+    row.innerHTML = `
+      <div class="info">
+        <div class="word">${w.k}</div>
+        <div class="meaning">${w.m} — ${w.a}</div>
+      </div>
+      <button class="remove-btn" title="Remove">✕</button>
+    `;
+    row.querySelector(".remove-btn").onclick = async () => {
+      const ref = doc(db, "users", currentUserId, PROGRESS_COL, String(i));
+      try{
+        await setDoc(ref, { saved: false }, { merge: true });
+        savedIndices.delete(i);
+      }catch(e){
+        console.error("Failed to remove saved word", e);
+        alert("Couldn't remove this word. Please check your connection and try again.");
+        return;
+      }
+      const remaining = indices.filter(x => x !== i);
+      if (remaining.length === 0){
+        listEl.innerHTML = "<p class=\"saved-empty\">No saved words yet — tap the ☆ on a card to save it here.</p>";
+      } else {
+        renderSavedList(remaining);
+      }
+    };
+    listEl.appendChild(row);
+  });
+}
+
+// ===== Login / Menu =====
+window.login = async function(){
+  const input = document.getElementById("userNameInput");
+  const name = input.value.trim();
+  if(!name){
+    alert("Please enter your name (or ID)");
+    return;
+  }
+  currentUser = name;
+  currentUserId = sanitizeId(name);
+  try{ localStorage.setItem("quizUserName", name); }catch(e){}
+
+  try{
+    await ensureUserDoc(name);
+  }catch(e){
+    console.error("Failed to register user", e);
+    alert("Failed to connect to the database. Please check your Firebase settings (firebaseConfig and rules).");
+    return;
+  }
+
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("userBar").style.display = "block";
+  document.getElementById("userBarName").textContent = currentUser;
+  document.getElementById("menuGreeting").textContent = `Hi, ${currentUser}!`;
+  showMenu();
+};
+
+function hideQuizParts(){
+  document.getElementById("savedScreen").style.display = "none";
+  document.getElementById("controlsArea").style.display = "none";
+  document.getElementById("quizContainer").style.display = "none";
+  document.getElementById("message").style.display = "none";
+  document.getElementById("metaRow").style.display = "none";
+  document.getElementById("result").style.display = "none";
+}
+
+window.showLogin = function(){
+  hideQuizParts();
+  document.getElementById("menuScreen").style.display = "none";
+  document.getElementById("userBar").style.display = "none";
+  document.getElementById("loginScreen").style.display = "block";
+};
+
+async function showMenu(){
+  hideQuizParts();
+  document.querySelector(".play-again").style.display = "none";
+  document.querySelector(".back-menu").style.display = "none";
+  document.getElementById("menuScreen").style.display = "block";
+  await Promise.all([refreshWrongCount(), refreshSavedCount()]);
+}
+window.backToMenu = showMenu;
+
+// ===== Flashcard State =====
+let quiz = [];
+let index = 0;
+let score = 0;
+let isFront = true;
+let currentQuizMode = "normal"; // "normal" | "review"
+
+window.start = function(){
+  currentQuizMode = "normal";
+  quiz = [...data];          // same order as the textbook
+  index = 0;
+  score = 0;
+  beginQuizUI();
+};
+
+window.startReview = async function(){
+  let wrongIdx;
+  try{
+    wrongIdx = await getWrongIndices();
+  }catch(e){
+    console.error(e);
+    alert("Failed to connect to the database. Please check your Firebase settings.");
+    return;
+  }
+  const wrongQs = wrongIdx.sort((a, b) => a - b).map(i => data[i]).filter(Boolean);
+  if(wrongQs.length === 0){
+    alert("No cards to review — great job! 🎉");
+    return;
+  }
+  currentQuizMode = "review";
+  quiz = wrongQs;
+  index = 0;
+  score = 0;
+  beginQuizUI();
+};
+
+function beginQuizUI(){
+  document.getElementById("menuScreen").style.display = "none";
+  document.getElementById("savedScreen").style.display = "none";
+  document.getElementById("controlsArea").style.display = "flex";
+  document.getElementById("quizContainer").style.display = "block";
+  document.getElementById("message").style.display = "block";
+  document.getElementById("metaRow").style.display = "flex";
+  document.querySelector(".play-again").style.display = "none";
+  document.querySelector(".back-menu").style.display = "none";
+  document.getElementById("result").style.display = "none";
+  showCard();
+}
+
+function updateView() {
+  if (quiz.length === 0 || index >= quiz.length) return;
+  const current = quiz[index];
+  const q = document.getElementById("question");
+  const kanjiOn = document.getElementById("mode").checked;
+  const romajiOn = document.getElementById("romajiMode").checked;
+
+  if (isFront) {
+    q.classList.remove("back-side");
+    q.innerHTML = kanjiOn ? current.k : current.r;
+    document.getElementById("romaji").textContent = romajiOn ? current.m : "---";
+    document.getElementById("sideLabel").textContent = "Japanese";
+    document.getElementById("sideLabel").classList.remove("back-label");
+    document.getElementById("tapHint").textContent = "👆 Tap to flip";
+  } else {
+    q.classList.add("back-side");
+    q.textContent = current.a;
+    document.getElementById("romaji").innerHTML = kanjiOn ? current.k : current.r;
+    document.getElementById("sideLabel").textContent = "English";
+    document.getElementById("sideLabel").classList.add("back-label");
+    document.getElementById("tapHint").textContent = "👆 Tap to flip back";
+  }
+  updateSaveButton();
+}
+window.updateView = updateView;
+
+window.flipCard = function(){
+  if (quiz.length === 0 || index >= quiz.length) return;
+  isFront = !isFront;
+  const card = document.getElementById("card");
+  card.classList.remove("flipping");
+  void card.offsetWidth;          // restart the animation
+  card.classList.add("flipping");
+  setTimeout(updateView, 170);    // swap the text at the middle of the flip
+  // After the first flip, show the "Still learning / I knew it" buttons
+  document.getElementById("flipBtn").style.display = "none";
+  document.getElementById("judgeRow").style.display = "flex";
+};
+
+function showCard() {
+  document.getElementById("message").textContent = "";
+  document.getElementById("scoreCorrect").textContent = score;
+  document.getElementById("scoreAttempted").textContent = index;
+  document.getElementById("qNum").textContent = Math.min(index + 1, quiz.length);
+  document.getElementById("qTotal").textContent = quiz.length;
+
+  // Finished
+  if (index >= quiz.length) {
+    document.getElementById("quizContainer").style.display = "none";
+    document.getElementById("message").style.display = "none";
+    document.getElementById("metaRow").style.display = "none";
+
+    let rate = score / quiz.length;
+    let stars =
+        rate === 1 ? "⭐⭐⭐⭐⭐" :
+        rate >= 0.8 ? "⭐⭐⭐⭐" :
+        rate >= 0.6 ? "⭐⭐⭐" :
+        rate >= 0.4 ? "⭐⭐" : "⭐";
+
+    document.getElementById("stars").textContent = stars;
+    document.getElementById("finalScore").textContent = `Known: ${score} / ${quiz.length}`;
+    document.querySelector("#result h2").textContent =
+        currentQuizMode === "review" ? "🎉 Review Complete! 🎉" : "🎉 Great Job! 🎉";
+
+    const missed = quiz.length - score;
+    const hint = document.getElementById("reviewHint");
+    if (currentQuizMode === "normal" && missed > 0) {
+      hint.textContent = `💡 Want to practice the ${missed} card(s) you're still learning? Tap "Back to Menu", then "Review".`;
+      hint.style.display = "block";
     } else {
-        wordDiv.innerHTML = data[index].a;
-        document.getElementById('romaji').innerText = "";
-        }
+      hint.textContent = "";
+      hint.style.display = "none";
     }
 
-    function flipCard() { isFront = !isFront; updateDisplay(); }
-    function nextCard() { index = (index + 1) % data.length; isFront = true; updateDisplay(); }
+    document.getElementById("result").style.display = "block";
+    document.querySelector(".play-again").style.display = "inline-block";
+    document.querySelector(".back-menu").style.display = "inline-block";
+    return;
+  }
 
-    updateDisplay();
+  document.getElementById("quizContainer").style.display = "block";
+  document.getElementById("flipBtn").style.display = "block";
+  document.getElementById("judgeRow").style.display = "none";
+  isFront = true;
+  updateView();
+}
+
+window.judge = function(knew){
+  if (quiz.length === 0 || index >= quiz.length) return;
+  const current = quiz[index];
+  if (knew) {
+    score++;
+    correctSound();
+  } else {
+    wrongSound();
+  }
+  // Record the result in Firestore. "Review" uses the "still learning" cards.
+  updateProgress(current.idx, knew).catch(e => console.error("Failed to save progress", e));
+  index++;
+  showCard();
+};
+
+window.restart = function(){
+  if(currentQuizMode === "review"){
+    window.startReview();
+  } else {
+    window.start();
+  }
+};
+
+// Keyboard: Space / Enter = flip, ← = still learning, → = I knew it
+document.addEventListener("keydown", e => {
+  if (document.getElementById("quizContainer").style.display !== "block") return;
+  if (e.target.tagName === "INPUT") return;
+  const judged = document.getElementById("judgeRow").style.display === "flex";
+  if (e.key === " " || e.key === "Enter"){ e.preventDefault(); window.flipCard(); }
+  else if (judged && e.key === "ArrowRight"){ window.judge(true); }
+  else if (judged && e.key === "ArrowLeft"){ window.judge(false); }
+});
+
+// ===== Init =====
+window.addEventListener("DOMContentLoaded", () => {
+  let saved = null;
+  try{ saved = localStorage.getItem("quizUserName"); }catch(e){}
+  if(saved){
+    document.getElementById("userNameInput").value = saved;
+  }
+});
+
 </script>
 </body>
 </html>
